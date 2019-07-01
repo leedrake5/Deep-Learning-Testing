@@ -73,10 +73,14 @@ system.time({
 #user   system  elapsed
 #1244.427  180.420  341.415
 
+###Hal
+#user  system  elapsed
+#2119.7754  179.570  90.270
+
 ###Use GPU
 library("keras"); library("sessioninfo")
-use_python("/Users/lee/anaconda3/bin/python")
-use_backend(backend = "plaidml")
+#use_python("/Users/lee/anaconda3/bin/python")
+#use_backend(backend = "plaidml")
 
 batch_size <- 128
 num_classes <- 10
@@ -94,8 +98,8 @@ y_test <- mnist$test$y
 x_train <- array_reshape(x_train, c(nrow(x_train), img_rows, img_cols, 1))
 x_test <- array_reshape(x_test, c(nrow(x_test), img_rows, img_cols, 1))
 input_shape <- c(img_rows, img_cols, 1)
-k_cast(x_train, dtype="int8")
-k_cast(x_test, dtype="int8")
+#k_cast(x_train, dtype="int8")
+#k_cast(x_test, dtype="int8")
 
 
 x_train <- x_train / 255
@@ -103,8 +107,8 @@ x_test <- x_test / 255
 
 y_train <- to_categorical(y_train, 10)
 y_test <- to_categorical(y_test, 10)
-k_cast(y_train, dtype="int8")
-k_cast(y_test, dtype="int8")
+#k_cast(y_train, dtype="int8")
+#k_cast(y_test, dtype="int8")
 
 model <- keras_model_sequential() %>%
 layer_conv_2d(filters = 32, kernel_size = c(3,3), activation = 'relu',
@@ -165,4 +169,70 @@ system.time({
 #user  system elapsed
 #16.467  14.347  62.911
 
+###Hal
+#user  system  elapsed
+#1401.799  45.319  57.963
 
+
+###Use Multiple GPUs
+library("keras"); library("sessioninfo")
+#use_python("/Users/lee/anaconda3/bin/python")
+#use_backend(backend = "plaidml")
+
+batch_size <- 128
+num_classes <- 10
+epochs <- 5
+
+img_rows <- 28
+img_cols <- 28
+
+mnist <- dataset_mnist()
+x_train <- mnist$train$x
+y_train <- mnist$train$y
+x_test <- mnist$test$x
+y_test <- mnist$test$y
+
+x_train <- array_reshape(x_train, c(nrow(x_train), img_rows, img_cols, 1))
+x_test <- array_reshape(x_test, c(nrow(x_test), img_rows, img_cols, 1))
+input_shape <- c(img_rows, img_cols, 1)
+#k_cast(x_train, dtype="int8")
+#k_cast(x_test, dtype="int8")
+
+
+x_train <- x_train / 255
+x_test <- x_test / 255
+
+y_train <- to_categorical(y_train, 10)
+y_test <- to_categorical(y_test, 10)
+#k_cast(y_train, dtype="int8")
+#k_cast(y_test, dtype="int8")
+
+model <- keras_model_sequential() %>%
+layer_conv_2d(filters = 32, kernel_size = c(3,3), activation = 'relu',
+input_shape = input_shape) %>%
+layer_conv_2d(filters = 64, kernel_size = c(3,3), activation = 'relu') %>%
+layer_max_pooling_2d(pool_size = c(2, 2)) %>%
+layer_dropout(rate = 0.25) %>%
+layer_flatten() %>%
+layer_dense(units = 128, activation = 'relu') %>%
+layer_dropout(rate = 0.5) %>%
+layer_dense(units = num_classes, activation = 'softmax')
+
+summary(model)
+
+parallel_model <- multi_gpu_model(model)
+
+parallel_model %>% compile(
+loss = loss_categorical_crossentropy,
+optimizer = optimizer_adadelta(),
+metrics = c('accuracy')
+)
+
+system.time({
+    parallel_model %>% fit(
+    x_train, y_train,
+    batch_size = batch_size,
+    epochs = 5,
+    validation_split = 0.2
+    )
+})
