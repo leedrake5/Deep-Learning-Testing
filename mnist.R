@@ -176,8 +176,10 @@ system.time({
 
 ###Use Multiple GPUs
 library("keras"); library("sessioninfo")
+library(reticulate)
 #use_python("/Users/lee/anaconda3/bin/python")
 #use_backend(backend = "plaidml")
+use_condaenv(condaenv='tf_gpu')
 
 batch_size <- 128
 num_classes <- 10
@@ -207,7 +209,6 @@ y_test <- to_categorical(y_test, 10)
 #k_cast(y_train, dtype="int8")
 #k_cast(y_test, dtype="int8")
 
-with(tf$device("/cpu:0"), {
 model <- keras_model_sequential() %>%
 layer_conv_2d(filters = 32, kernel_size = c(3,3), activation = 'relu',
 input_shape = input_shape) %>%
@@ -218,11 +219,10 @@ layer_flatten() %>%
 layer_dense(units = 128, activation = 'relu') %>%
 layer_dropout(rate = 0.5) %>%
 layer_dense(units = num_classes, activation = 'softmax')
-})
 
 summary(model)
 
-parallel_model <- multi_gpu_model(model)
+parallel_model <- multi_gpu_model(model, gpus=4)
 
 parallel_model %>% compile(
 loss = loss_categorical_crossentropy,
@@ -238,3 +238,7 @@ system.time({
     validation_split = 0.2
     )
 })
+
+###MultiGPU Hal
+#user  #system  #elapsed
+#86.103  13.663  37.164
