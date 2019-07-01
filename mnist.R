@@ -207,6 +207,7 @@ y_test <- to_categorical(y_test, 10)
 #k_cast(y_train, dtype="int8")
 #k_cast(y_test, dtype="int8")
 
+with(tf$device("/cpu:0"), {
 model <- keras_model_sequential() %>%
 layer_conv_2d(filters = 32, kernel_size = c(3,3), activation = 'relu',
 input_shape = input_shape) %>%
@@ -217,6 +218,7 @@ layer_flatten() %>%
 layer_dense(units = 128, activation = 'relu') %>%
 layer_dropout(rate = 0.5) %>%
 layer_dense(units = num_classes, activation = 'softmax')
+})
 
 summary(model)
 
